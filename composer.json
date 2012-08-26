@@ -2,7 +2,7 @@
     "name": "mef/socket-bundle",
     "type": "symfony-bundle",
     "description": "Symfony MEFSocketBundle",
-    "keywords": ["User management"],
+    "keywords": ["socket tcp websocket server client"],
     "homepage": "http://positionabsolute.net/mefsocketbundle",
     "license": "MIT",
     "authors": [
