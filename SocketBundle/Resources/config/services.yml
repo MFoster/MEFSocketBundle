@@ -1,0 +1,18 @@
+services:
+    mef.socket.server:
+        class: MEF\SocketBundle\Socket\SocketServer
+        arguments: [@logger, @event_dispatcher]
+    
+    mef.socket.client:
+        class: MEF\SocketBundle\Socket\SocketClient
+        arguments: []
+        calls:
+            - [setProtocol, ["tcp"]]
+    
+    mef.websocket.server:
+        parent: mef.socket.server
+        class: MEF\SocketBundle\Socket\WebSocket\WebSocketServer
+        
+    mef.websocket.client:
+        class: MEF\SocketBundle\Socket\WebSocket\WebSocketClient
+        parent: mef.socket.client
