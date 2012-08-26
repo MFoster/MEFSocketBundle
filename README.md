@@ -144,7 +144,7 @@ Granted you're now either in a script or working directly from a console:
 If everything worked right you should receive a response back from the server with "Why hello yourself" and 
 you can consider your websocket server up and running.
 
-I will now shamelessly plug my other project [TrafficJS]4.  Which is a javascript library coupled with [Backbone.js][5]
+I will now shamelessly plug my other project [TrafficJS][4].  Which is a javascript library coupled with [Backbone.js][5]
 to handle XmlHttpRequest and WebSocket communications in an elegant event driven fashion.  I will
 be using it in conjunction with this bundle so you can bank on there being benefits from using both.
 
