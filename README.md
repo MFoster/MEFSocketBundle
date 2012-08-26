@@ -81,6 +81,7 @@ I've used phpunit groups to help limit things as you can't run all the tests at 
 I can get both servers to run in parellel, which isn't hard, I just have to work the configuration options a little more.  
 
 Run this in one shell:
+
     app/console socket:listen --debug --test-mode
     
 Run this in another shell:
@@ -88,4 +89,62 @@ Run this in another shell:
     phpunit -c vendor/MEF --group="socketclient"
     
 Hopefully you'll see the great line of green and all will be well.
+
+### WebSocket Usage
+
+Now let's get to the good stuff, tcp is fun for messing around with some low level stuff, maybe some server to server communications
+but what we're really after here is the holy grail of RIA, [Push Technology].  With this we no longer have to wait for a request from the client
+to give them updated information.  With a streaming websocket the browser is able to receive events from the server.  For instance one user
+changes a record while another user is viewing that record, now the user who is viewing gets an updated state of data because the event 
+fired on the server that the record has changed and it was pushed to the user.
+
+Let's get to it, start up your WebSocket server with:
+
+    app/console socket:web:listen
+    
+The same flags that applied to the tcp socket apply to the websocket, so --debug and --test-mode are your new best friends.
+To test the websocket server, you can't use telnet because the [websocket protocol] is outrageous and you'd have no chance to be able
+to emulate it off keyboard input.
+
+#### Testing WebSocket with phpunit
+
+First, start up your server in full fledge test mode
+
+    app/console socket:web:listen --debug --test-mode
+
+I recommend using phpunit to start and then you can actually test it with your browser.
+
+    phpunit -c vendors/MEF --group="websocket"
+    
+This test group sends a lot of data to and from your server, the results aren't 100% every time, socket communications are tricky
+and i'm still ironing out the kinks, but it should have an 80%+ success rate, if you didn't catch it at the top, this is still
+certifiably grade A Beta...
+
+If that all worked then you can test it with your browser, so pop open Chrome or Firefox and if you thought you'd use IE please find
+a short pier for your long walk. 
+
+With Chrome you can just pop open the developer console through Right Click -> Inspect Element or Option+Mac+I or uhh, ctrl windows I on windows?
+
+With Firefox you'll need [firebug], which I reccommend getting anyways, it's a great add on for FF.
+
+Running a script on a webpage or grease monkey would also work, I'm just trying to use the path of least resistance, but if you're formalizing
+your JS tests, then absolutely use a script!!!
+
+Granted you're now either in a script or working directly from a console:
+
+    var socket = WebSocket("ws://127.0.0.1:4000");
+    
+    socket.onmessage = function(evt){ console.log("Socket Message received %o", evt); };
+    
+    socket.send("hello");
+    
+If everything worked right you should receive a response back from the server with "Why hello yourself" and 
+you can consider your websocket server up and running, now get to implementing something cool with it.
+
+
+
+
+[1]: http://en.wikipedia.org/wiki/Push_technology   "Push Technology"
+[2]: http://tools.ietf.org/html/rfc6455             "websocket protocol"
+[3]: http://getfirebug.com/                         "firebug"
 
