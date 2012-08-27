@@ -8,8 +8,29 @@ Implement websockets in your symfony application.
 
 ### Installation
 
-I still need to set it up with composer.  However you can manually install it if 
-you're very familiar with Symfony bundle architecture. 
+You need to [get composer][6] and install that if you haven't already. If you don't have [symfony already, go download it][7]
+via the composer console command, don't be a sissy, you can do it. Now go to your symfony application root directory
+and modify the composer.json.  Add this to the required section:
+
+    "mef/socket-bundle": "dev-master"
+    
+Once that's been situated, run your composer command and update your application.
+
+    php composer.phar update
+    
+That should do most of the dirty work for you, including registering the namespace and ensuring dependencies.  The only thing 
+left is injecting the bundle into the AppKernel and setting up configuration.
+
+Open up your app/AppKernel.php file and add the emboldened line below.  
+
+    $bundles = array(
+            new Symfony\Bundle\FrameworkBundle\FrameworkBundle(),
+            new Symfony\Bundle\SecurityBundle\SecurityBundle(),
+            new Symfony\Bundle\TwigBundle\TwigBundle(),
+            ...
+            **new MEF\SocketBundle\MEFSocketBundle()**
+            );
+            
 
 ### Configuration
 
@@ -148,11 +169,7 @@ I will now shamelessly plug my other project [TrafficJS][4].  Which is a javascr
 to handle XmlHttpRequest and WebSocket communications in an elegant event driven fashion.  I will
 be using it in conjunction with this bundle so you can bank on there being benefits from using both.
 
-
-
 now get to implementing something cool with it.
-
-
 
 
 [1]: http://en.wikipedia.org/wiki/Push_technology   "Push Technology"
@@ -160,3 +177,5 @@ now get to implementing something cool with it.
 [3]: http://getfirebug.com/                         "firebug"
 [4]: https://github.com/MFoster/TrafficJS           "TrafficJS"
 [5]: http://backbonejs.org/                         "Backbone.js"
+[6]: http://getcomposer.org/                        "get composer"
+[7]: http://symfony.com/download                    "symfony"
