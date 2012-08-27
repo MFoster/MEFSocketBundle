@@ -4,6 +4,7 @@
     "description": "Symfony MEFSocketBundle",
     "keywords": ["socket tcp websocket server client"],
     "homepage": "http://positionabsolute.net/mefsocketbundle",
+    "version" : "1.0.0-beta",
     "license": "MIT",
     "authors": [
         {
