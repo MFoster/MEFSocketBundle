@@ -18,5 +18,6 @@
     },
     "autoload": {
         "psr-0": { "MEF\\SocketBundle": "" }
-    }
+    },
+    "target-dir": "MEF/SocketBundle"
 }
