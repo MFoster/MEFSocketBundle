@@ -3,9 +3,10 @@ MEFSocketBundle
 
 Implement websockets in your symfony application.
 ------------------------------------------------
+### Documentation
 
-### This is still in BETA and is outrageously discouraged from being used in any production environment.
-
+  Refer to [documentation site][8]
+  
 ### Installation
 
 You need to [get composer][6] and install that if you haven't already. If you don't have [symfony, go download it][7]
@@ -173,3 +174,4 @@ now get to implementing something cool with it.
 [5]: http://backbonejs.org/                         "Backbone.js"
 [6]: http://getcomposer.org/                        "get composer"
 [7]: http://symfony.com/download                    "symfony"
+[8]: http://positionabsolute.net/mefsocketbundle    "documentation site"
