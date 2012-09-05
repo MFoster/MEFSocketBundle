@@ -8,7 +8,7 @@ Implement websockets in your symfony application.
 
 ### Installation
 
-You need to [get composer][6] and install that if you haven't already. If you don't have [symfony already, go download it][7]
+You need to [get composer][6] and install that if you haven't already. If you don't have [symfony, go download it][7]
 via the composer console command, don't be a sissy, you can do it. Now go to your symfony application root directory
 and modify the composer.json.  Add this to the required section:
 
@@ -21,14 +21,14 @@ Once that's been situated, run your composer command and update your application
 That should do most of the dirty work for you, including registering the namespace and ensuring dependencies.  The only thing 
 left is injecting the bundle into the AppKernel and setting up configuration.
 
-Open up your app/AppKernel.php file and add the emboldened line below.  
+Open up your app/AppKernel.php file and add the last line below.  
 
     $bundles = array(
             new Symfony\Bundle\FrameworkBundle\FrameworkBundle(),
             new Symfony\Bundle\SecurityBundle\SecurityBundle(),
             new Symfony\Bundle\TwigBundle\TwigBundle(),
             ...
-            **new MEF\SocketBundle\MEFSocketBundle()**
+            new MEF\SocketBundle\MEFSocketBundle()
             );
             
 
@@ -40,10 +40,16 @@ Here is an example configuration
         port: 4000
         host: 127.0.0.1
         
-I want to expand on this configuration to be able to have two different configurations for tcp and ws respectively.
-However I do plan to leave each protocol for server/client configurations to be the same, so you're certain that
-the client is attempting to connect to the appropriate server.  Meaning the server and client will have the same
-host and port configs.
+You can also run tcp and ws in parallel by specifying each in the configuration
+    
+    mef_socket:
+        tcp:
+            port: 4000
+            host: 127.0.0.1
+        web:
+            port: 4001
+            host: 127.0.0.1    
+
 
 ### TCP Socket Usage
 
@@ -99,7 +105,7 @@ Spin up the server in one shell and execute the phpunit tests in another.  I tri
 process but it just wasn't playing nice, it's too fast for the port binding and things just got crazy, so two shells.  
 
 I've used phpunit groups to help limit things as you can't run all the tests at once, it just wouldn't work until 
-I can get both servers to run in parellel, which isn't hard, I just have to work the configuration options a little more.  
+I can get both servers to run in parallel, which isn't hard, I just have to work the configuration options a little more.  
 
 Run this in one shell:
 
@@ -136,10 +142,6 @@ First, start up your server in full fledge test mode
 I recommend using phpunit to start and then you can actually test it with your browser.
 
     phpunit -c vendors/MEF --group="websocket"
-    
-This test group sends a lot of data to and from your server, the results aren't 100% every time, socket communications are tricky
-and i'm still ironing out the kinks, but it should have an 80%+ success rate, if you didn't catch it at the top, this is still
-certifiably grade A Beta...
 
 
 ### Testing WebSocket with a browser
@@ -147,20 +149,12 @@ certifiably grade A Beta...
 If that all worked then you can test it with your browser, so pop open Chrome or Firefox and if you thought you'd use IE please find
 a short pier for your long walk. 
 
-With Chrome you can just pop open the developer console through Right Click -> Inspect Element or Option+Mac+I or uhh, ctrl windows I on windows?
-
-With Firefox you'll need [firebug][3], which I reccommend getting anyways, it's a great add on for FF.
-
-Running a script on a webpage or grease monkey would also work, I'm just trying to use the path of least resistance, but if you're formalizing
-your JS tests, then absolutely use a script!!!
-
-Granted you're now either in a script or working directly from a console:
-
     var socket = WebSocket("ws://127.0.0.1:4000");
     
     socket.onmessage = function(evt){ console.log("Socket Message received %o", evt); };
     
     socket.send("hello");
+    
     
 If everything worked right you should receive a response back from the server with "Why hello yourself" and 
 you can consider your websocket server up and running.

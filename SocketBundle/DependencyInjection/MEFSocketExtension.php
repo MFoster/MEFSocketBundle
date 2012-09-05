@@ -39,12 +39,36 @@ class MEFSocketExtension extends Extension
         $server = $container->getDefinition('mef.socket.server');
         
         $client = $container->getDefinition('mef.socket.client');
-      
+        
+        //if host and port are set directly, that will be used
+        if(isset($config['host']) && isset($config['port'])){
+            $this->setServerClientCombo($server, $client, $config);
+        }//tcp specific settings, web also inherits this unless overriden
+        else if(isset($config['tcp'])){
+            $this->setServerClientCombo($server, $client, $config['tcp']);
+        }
+        
+        //web setting override
+        if(isset($config['web'])){
+            $server = $container->getDefinition('mef.websocket.server');
+        
+            $client = $container->getDefinition('mef.websocket.client');
+            
+            $this->setServerClientCombo($server, $client, $config['web']);
+        }    
+        
+    }
+    
+    protected function setServerClientCombo($server, $client, $config)
+    {
+        
         $server->addMethodCall('setHost', array($config['host']));
         $server->addMethodCall('setPort', array($config['port']));
         
         $client->addMethodCall('setHost', array($config['host']));
-        $client->addMethodCall('setPort', array($config['port']));
+        $client->addMethodCall('setPort', array($config['port']));        
         
     }
+    
+    
 }

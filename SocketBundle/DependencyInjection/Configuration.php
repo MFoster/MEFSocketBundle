@@ -22,8 +22,20 @@ class Configuration implements ConfigurationInterface
         
         $rootNode
             ->children()
-                ->scalarNode('port')->isRequired()->end()
-                ->scalarNode('host')->isRequired()->end()
+                ->scalarNode('port')->end()
+                ->scalarNode('host')->end()
+                ->arrayNode('tcp')
+                    ->children()
+                        ->scalarNode('port')->isRequired()->end()
+                        ->scalarNode('host')->isRequired()->end()
+                    ->end()
+                ->end()
+                ->arrayNode('web')
+                    ->children()
+                        ->scalarNode('port')->isRequired()->end()
+                        ->scalarNode('host')->isRequired()->end()
+                    ->end()
+                ->end()
             ->end();
 
         // Here you should define the parameters that are allowed to

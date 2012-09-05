@@ -101,7 +101,7 @@ class SocketClient extends SocketBase
         if(!$this->socket){
             //$socket = fsockopen($this->getHost(), $this->getPort(), $this->errStr, $this->errNum);
             $socket = stream_socket_client($this->getProtocol() . '://'. $this->getHost() .':'. $this->getPort());
-            stream_set_timeout($socket, $this->timeout) or die("fuck it");
+            stream_set_timeout($socket, $this->timeout);
             
             if(!$socket){
                 throw new \RuntimeException('failed to connect to '. $this->getHost() . ':' . $this->getPort());

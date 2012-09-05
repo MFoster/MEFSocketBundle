@@ -63,15 +63,6 @@ class WebSocketClient extends SocketClient
      */
     protected $handshake = false;
     
-    /**
-     * doubleByteLength
-     * 
-     * (default value: 65280)
-     * 
-     * @var int
-     * @access protected
-     */
-    protected $doubleByteLength = 65280;
     
     /**
      * websocket protocol version
@@ -92,16 +83,7 @@ class WebSocketClient extends SocketClient
      * @access protected
      */
     protected $chunkLength = 1024;
-    
-    /**
-     * openByte
-     * 
-     * (default value: 129)
-     * 
-     * @var int
-     * @access protected
-     */
-    protected $openByte = 129;
+
     
     /**
      * sendMessage function.
@@ -125,13 +107,13 @@ class WebSocketClient extends SocketClient
         if($count < 126) {
             $count = chr(128 + $count);//mask plus count
         }
-        else if($count > 125 && $count < $this->doubleByteLength) {
+        else if($count > 125 && $count < ByteBuffer::DOUBLE_BYTE_LENGTH) {
             $count = ByteBuffer::parseNumberToBuffer($count);
-            $count->unshift(254);
+            $count->unshift(ByteBuffer::DOUBLE_BYTE);
         }
         else{
             $count = ByteBuffer::parseNumberToBuffer($count);
-            $count->unshift(255);
+            $count->unshift(ByteBuffer::QUAD_BYTE);
         }
 
         $compiledMessage = chr($opCode)
