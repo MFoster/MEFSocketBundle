@@ -117,6 +117,19 @@ class SocketClient extends SocketBase
     }
     
     /**
+     * Determines whether the instance has constructed an active socket.
+     * If the object hasn't then it's close procedures needs to handle that
+     * as closing a null resource can lead to problems
+     * 
+     * @access public
+     * @return bool
+     */
+    public function hasSocket()
+    {
+        return !!$this->socket;
+    }
+    
+    /**
      * write function.
      * 
      * @access public
@@ -168,6 +181,10 @@ class SocketClient extends SocketBase
      */
     public function close()
     {
+        if(!$this->hasSocket()){
+            return true;//was never open
+        }
+        
         try{
             $this->write("\0");
         }
