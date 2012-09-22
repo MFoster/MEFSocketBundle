@@ -14,6 +14,21 @@ use Symfony\Component\HttpFoundation\Request;
 class WebSocketServer extends SocketServer
 {
     protected $eventPrefix = 'websocket';
+    
+    /**
+     * broadcast function.
+     * 
+     * @access public
+     * @param mixed $input
+     * @return void
+     */
+    public function broadcast($message)
+    {
+        foreach($this->socketStreams as $stream) {
+            if($stream && method_exists($stream, 'sendMessage'))
+                $stream->sendMessage($message);
+        }
+    }
     /**
      * factory function to return SocketStream instance
      * 

@@ -105,6 +105,21 @@ class SocketServer extends SocketBase
     }
     
     /**
+     * broadcast function.
+     * 
+     * @access public
+     * @param mixed $input
+     * @return void
+     */
+    public function broadcast($input)
+    {
+        foreach($this->socketStreams as $stream) {
+            if($stream && method_exists($stream, 'write'))
+                $stream->write($input);
+        }
+    }
+    
+    /**
      * loop function.
      * 
      * @access protected

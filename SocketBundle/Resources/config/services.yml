@@ -16,3 +16,9 @@ services:
     mef.websocket.client:
         class: MEF\SocketBundle\Socket\WebSocket\WebSocketClient
         parent: mef.socket.client
+        
+    mef.websocket.broadcast:
+        class: MEF\SocketBundle\Listener\WebSocketBroadcastListener
+        arguments: [@logger, @mef.websocket.server]
+        tags:
+            - { name: kernel.event_listener, event: websocket.message, method: onMessage }
