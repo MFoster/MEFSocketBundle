@@ -50,7 +50,15 @@ class SocketServer extends SocketBase
      */
     protected $eventDispatcher;
     
-    
+    /**
+     * socket resource opened and listening to the specified port.
+     * 
+     * (default value: false)
+     * 
+     * @var bool
+     * @access protected
+     */
+    protected $socket = false;
     /**
      * __construct function.
      * 
@@ -212,7 +220,9 @@ class SocketServer extends SocketBase
      */
     protected function shutdown()
     {
-        socket_close($this->socket);
+        if($this->socket) {
+            socket_close($this->socket);   
+        }
     }
     
     /**
