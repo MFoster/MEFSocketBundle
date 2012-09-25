@@ -14,6 +14,7 @@ class WebSocketClientTest extends ApplicationTestCase
      * @access public
      * @return void
      * @group websocket
+     * @group websocket.handshake
      */
     public function testHandshake()
     {
@@ -30,9 +31,9 @@ class WebSocketClientTest extends ApplicationTestCase
     /**
      * testSayHello function.
      * @group websocket
+     * @group websocket.hello
      * @access public
      * @return void
-     * @group websocket
      */
     public function testSayHello()
     {
@@ -49,8 +50,9 @@ class WebSocketClientTest extends ApplicationTestCase
      * testPingPong function.
      * 
      * @access public
-     * @return void
      * @group websocket
+     * @group websocket.ping
+     * @return void
      */
     public function testPingPong()
     {
@@ -71,8 +73,8 @@ class WebSocketClientTest extends ApplicationTestCase
      * testMediumReply function.
      * 
      * @access public
-     * @return void
      * @group websocket
+     * @group websocket.medium
      */
     public function testMediumReply()
     {
@@ -98,6 +100,7 @@ class WebSocketClientTest extends ApplicationTestCase
      * @access public
      * @return void
      * @group websocket
+     * @group websocket.big
      */
     public function testBigReply()
     {
@@ -120,6 +123,7 @@ class WebSocketClientTest extends ApplicationTestCase
      * @access public
      * @return void
      * @group websocket
+     * @group websocket.medium
      */
     public function testMediumMessage()
     {
@@ -160,7 +164,14 @@ class WebSocketClientTest extends ApplicationTestCase
         
         
     }
-  
+    
+    /**
+     * Tests sockets ability to open a new socket and immediately close it..
+     * @group websocket
+     * @group websocket.close
+     * @access public
+     * @return void
+     */
     public function testClose()
     {
         $client = $this->get('mef.websocket.client');
@@ -169,7 +180,6 @@ class WebSocketClientTest extends ApplicationTestCase
         
         $this->assertEquals(0, $result);
         
-        echo "RESULT OF SOCKET CLOSE $result";
     }
     
 

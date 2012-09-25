@@ -182,7 +182,7 @@ class SocketClient extends SocketBase
     public function close()
     {
         if(!$this->hasSocket()){
-            return true;//was never open
+            return 0;//was never open
         }
         
         try{
