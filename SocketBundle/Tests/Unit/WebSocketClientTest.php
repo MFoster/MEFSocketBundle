@@ -42,7 +42,7 @@ class WebSocketClientTest extends ApplicationTestCase
         $result = $client->sendMessage('hello');
         
         $reply = $client->read();
-        
+       
         $this->assertRegExp('/hello/', "$reply");
                         
     }  
@@ -178,7 +178,7 @@ class WebSocketClientTest extends ApplicationTestCase
         
         $result = $client->close();
         
-        $this->assertEquals(0, $result);
+        $this->assertEquals($result, true);
         
     }
     
