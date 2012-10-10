@@ -181,16 +181,6 @@ class WebSocketStream extends SocketStream
         else if($buffer->first() == ByteBuffer::TEXT_BYTE || $buffer->first() == ByteBuffer::PING_BYTE) {
             $this->processNewMessage($buffer);
         }
- /*       else if($buffer->first() == 136){//close frame
-            $this->processNewMessage($buffer);
-            $this->close();
-        }
-        else if($buffer->first() == 137){//ping frame
-            $this->processPing($buffer);
-        }
-        else if($buffer->first() == 138){//pong frame
-            $this->processPong($buffer);
-        }*/
         else if($buffer->get(1) == 128){//zero length frame
             $this->close();
         }
@@ -245,7 +235,7 @@ class WebSocketStream extends SocketStream
         $lengthBuff = $buffer->slice(0, 10);
         
         //echo "\nLength buff = ". print_r($lengthBuff);
-        if($this->messageLength == $this->doubleByteLength){
+        if($this->messageLength == $this->doubleByteLength) {
             $lenBuff = $buffer->slice(2, 2);
             $this->messageLength = $lenBuff->sum();
             $offset = 4;
@@ -410,7 +400,7 @@ class WebSocketStream extends SocketStream
     public function createHandshakeResponse()
     {
         
-        return new Response("\r\n\r\n", 101, $this->getHandshakeHeaders());
+        return new Response("", 101, $this->getHandshakeHeaders());
         
     }
     

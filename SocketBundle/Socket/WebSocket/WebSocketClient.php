@@ -22,7 +22,7 @@ class WebSocketClient extends SocketClient
      * @var string
      * @access protected
      */
-    protected $httpHeaderDelimeter = "/[\r\n]{4}$/";
+    protected $httpHeaderDelimeter = "/[\r\n]{4,}$/";
     
     /**
      * uri
@@ -211,7 +211,7 @@ class WebSocketClient extends SocketClient
             $headers[strtolower($headerPart[0])] = trim($headerPart[1]);
         }
         
-        $response = new Response("\r\n\r\n", $statusStruct['code'], $headers);
+        $response = new Response('', $statusStruct['code'], $headers);
         
         return $response;
         
