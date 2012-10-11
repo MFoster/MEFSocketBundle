@@ -400,7 +400,7 @@ class WebSocketStream extends SocketStream
     public function createHandshakeResponse()
     {
         
-        return new Response("\r\n", 101, $this->getHandshakeHeaders());
+        return new Response(null, 101, $this->getHandshakeHeaders());
         
     }
     

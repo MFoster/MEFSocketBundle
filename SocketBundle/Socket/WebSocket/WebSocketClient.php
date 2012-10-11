@@ -211,7 +211,7 @@ class WebSocketClient extends SocketClient
             $headers[strtolower($headerPart[0])] = trim($headerPart[1]);
         }
         
-        $response = new Response('', $statusStruct['code'], $headers);
+        $response = new Response(null, $statusStruct['code'], $headers);
         
         return $response;
         
