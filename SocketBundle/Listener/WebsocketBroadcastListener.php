@@ -31,7 +31,7 @@ class WebSocketBroadcastListener
         
         if(is_object($result) && isset($result->broadcast)) {
             $this->logger->debug('received broadcast message broadcasting: '. $result->broadcast);
-            $this->socketServer->broadcast($result->broadcast);
+            $this->socketServer->broadcast($message);
         }
         
         
