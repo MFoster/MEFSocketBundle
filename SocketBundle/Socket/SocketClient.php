@@ -130,6 +130,17 @@ class SocketClient extends SocketBase
     }
     
     /**
+     * alias for write, easier for polymorphism.
+     * 
+     * @access public
+     * @param mixed $message
+     * @return void
+     */
+    public function sendMessage($message)
+    {
+        return $this->write($message);
+    }
+    /**
      * write function.
      * 
      * @access public

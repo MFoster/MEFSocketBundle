@@ -59,6 +59,16 @@ class SocketServer extends SocketBase
      * @access protected
      */
     protected $socket = false;
+    
+    /**
+     * application name, used for events to discerne between one server and another
+     * 
+     * (default value: false)
+     * 
+     * @var bool
+     * @access protected
+     */
+    protected $name = 'default';
     /**
      * __construct function.
      * 
@@ -113,7 +123,7 @@ class SocketServer extends SocketBase
     }
     
     /**
-     * broadcast function.
+     * Sends a message to all steams connected to the server
      * 
      * @access public
      * @param mixed $input
@@ -128,7 +138,8 @@ class SocketServer extends SocketBase
     }
     
     /**
-     * loop function.
+     * iterates over the internal collection of streams and opens any new connections
+     * or read streams that have new information. 
      * 
      * @access protected
      * @return void
@@ -235,7 +246,7 @@ class SocketServer extends SocketBase
      */
     protected function dispatch($evt)
     {
-        $name = $this->eventPrefix . '.' . $evt->getType();
+        $name = $this->eventPrefix . '.' . ($this->hasName() == true ? $this->getName() . '.' . $evt->getType() : $evt->getType());
         
         $this->eventDispatcher->dispatch($name, $evt);
     }
@@ -288,7 +299,39 @@ class SocketServer extends SocketBase
         }
     }
     
+    /**
+     * setName function.
+     * 
+     * @access public
+     * @param mixed $name
+     * @return void
+     */
+    public function setName($name)
+    {
+        $this->name = $name;
+    }
     
+    /**
+     * getName function.
+     * 
+     * @access public
+     * @return void
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+    
+    /**
+     * hasName function.
+     * 
+     * @access public
+     * @return void
+     */
+    public function hasName()
+    {
+        return $this->name != false;
+    }
     
 
 }

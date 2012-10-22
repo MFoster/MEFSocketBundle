@@ -34,6 +34,7 @@ class WebSocketListenCommand extends ContainerAwareCommand
         $this
             ->setName('socket:web:listen')
             ->setDescription('Starts listening for websocket traffic on a specified port')
+            ->addArgument('server', InputArgument::OPTIONAL, 'If set, will use specified service instead of default websocket')
             ->addOption('port', null, InputOption::VALUE_NONE, 'If set, will override configured port')
             ->addOption('host', null, InputOption::VALUE_NONE, 'If set will override configured host name')
             ->addOption('debug', null, InputOption::VALUE_NONE, 'Adds log events to terminal')
@@ -53,7 +54,17 @@ class WebSocketListenCommand extends ContainerAwareCommand
     {
         $container = $this->getContainer();
         //$container->enterScope('socket');
-        $socket = $container->get('mef.websocket.server');
+        $name = $input->getArgument('server');
+        if(!$name){
+            $name = 'mef.websocket.server';
+            $evtName = 'default';
+        }
+        else{
+            $evtName = $name;
+            $name = sprintf('socket.%s.server', $name);
+        }
+                
+        $socket = $container->get($name);
         $evt = $container->get('event_dispatcher');
         
         $this->output = $output;
@@ -66,19 +77,19 @@ class WebSocketListenCommand extends ContainerAwareCommand
         }
                 
         if($input->getOption('debug')){
-            $evt->addListener('websocket.handshake', array($this, 'debugSocketHandshake'));
-            $evt->addListener('websocket.data', array($this, 'debugSocketData'));
-            $evt->addListener('websocket.message', array($this, 'debugSocketMessage'));
+            $evt->addListener(sprintf('websocket.%s.handshake', $evtName), array($this, 'debugSocketHandshake'));
+            $evt->addListener(sprintf('websocket.%s.data', $evtName), array($this, 'debugSocketData'));
+            $evt->addListener(sprintf('websocket.%s.message', $evtName), array($this, 'debugSocketMessage'));
         }
         
         if($input->getOption('test-mode')){
-            $evt->addListener('websocket.message', array($this, 'testModeMessage'));
+            $evt->addListener(sprintf('websocket.%s.message', $evtName), array($this, 'testModeMessage'));
         }
         
-        $evt->addListener('websocket.open', array($this, 'handleSocketOpen'));
-        $evt->addListener('websocket.message', array($this, 'handleSocketMessage'));
-        $evt->addListener('websocket.ping', array($this, 'handleSocketPing'));
-        $evt->addListener('websocket.close', array($this, 'handleSocketClose'));
+        $evt->addListener(sprintf('websocket.%s.open', $evtName), array($this, 'handleSocketOpen'));
+        $evt->addListener(sprintf('websocket.%s.message', $evtName), array($this, 'handleSocketMessage'));
+        $evt->addListener(sprintf('websocket.%s.ping', $evtName), array($this, 'handleSocketPing'));
+        $evt->addListener(sprintf('websocket.%s.close', $evtName), array($this, 'handleSocketClose'));
 
         set_time_limit(0);
         
@@ -189,7 +200,7 @@ class WebSocketListenCommand extends ContainerAwareCommand
                 $this->output->writeln('successfully responded to medium message, length = ' . strlen($msg));
             }
         }
-        else if ($message = 'hello big'){
+        else if ($message == 'hello big'){
             $message = $this->generateBigMessage();
             $result = $stream->sendMessage($message);
             if($result === false){

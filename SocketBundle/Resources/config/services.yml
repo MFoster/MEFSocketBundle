@@ -1,24 +1,31 @@
+parameters:
+    mef.socket.server.class: MEF\SocketBundle\Socket\SocketServer
+    mef.socket.client.class: MEF\SocketBundle\Socket\SocketClient
+    mef.websocket.server.class: MEF\SocketBundle\Socket\WebSocket\WebSocketServer
+    mef.websocket.client.class: MEF\SocketBundle\Socket\WebSocket\WebSocketClient
+    mef.websocket.broadcast.class: MEF\SocketBundle\Listener\WebSocketBroadcastListener
+    
 services:
     mef.socket.server:
-        class: MEF\SocketBundle\Socket\SocketServer
+        class: %mef.socket.server.class%
         arguments: [@logger, @event_dispatcher]
     
     mef.socket.client:
-        class: MEF\SocketBundle\Socket\SocketClient
+        class: %mef.socket.client.class%
         arguments: []
         calls:
             - [setProtocol, ["tcp"]]
     
     mef.websocket.server:
         parent: mef.socket.server
-        class: MEF\SocketBundle\Socket\WebSocket\WebSocketServer
+        class: %mef.websocket.server.class%
         
     mef.websocket.client:
-        class: MEF\SocketBundle\Socket\WebSocket\WebSocketClient
+        class: %mef.websocket.client.class%
         parent: mef.socket.client
         
     mef.websocket.broadcast:
-        class: MEF\SocketBundle\Listener\WebSocketBroadcastListener
+        class: %mef.websocket.broadcast.class%
         arguments: [@logger, @mef.websocket.server]
         tags:
             - { name: kernel.event_listener, event: websocket.message, method: onMessage }

@@ -11,6 +11,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\Loader;
+use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Reference;
 
 /**
  * This is the class that loads and manages your bundle configuration
@@ -59,7 +61,39 @@ class MEFSocketExtension extends Extension
             $this->setServerClientCombo($server, $client, $config['web']);
             
             $container->setParameter('mef.websocket.url', 'ws://' . $config['web']['host'] . ':' . $config['web']['port']);
-        }    
+        }
+        
+        if(isset($config['servers'])){
+            $loggerDef = new Reference('logger');
+            $eventDispatcher = new Reference('event_dispatcher');
+            foreach($config['servers'] as $name => $serverConfig){
+                $className = ($serverConfig['protocol'] == 'web' ? 
+                             $container->getParameter('mef.websocket.server.class') : 
+                             $container->getParameter('mef.socket.server.class'));
+                             
+                $serverDef = new Definition($className);
+                $serverDef->addMethodCall('setName', array($name));
+                $serverDef->addMethodCall('setHost', array($serverConfig['host']));
+                $serverDef->addMethodCall('setPort', array($serverConfig['port']));
+                $serverDef->setArguments(array($loggerDef, $eventDispatcher));
+                $container->setDefinition(sprintf('socket.%s.server', $name), $serverDef);
+            }
+        }
+        
+        if(isset($config['clients'])){
+            foreach($config['clients'] as $name => $clientConfig){
+                $className = ($clientConfig['protocol'] == 'web' ? 
+                             $container->getParameter('mef.websocket.client.class') : 
+                             $container->getParameter('mef.socket.client.class'));
+                             
+                $clientDef = new Definition($className);
+                $clientDef->addMethodCall('setHost', array($clientConfig['host']));
+                $clientDef->addMethodCall('setPort', array($clientConfig['port']));
+                $container->setDefinition(sprintf('socket.%s.client', $name), $clientDef);
+                
+            }
+        }
+        
         
     }
     
