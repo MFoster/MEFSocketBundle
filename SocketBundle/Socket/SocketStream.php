@@ -8,6 +8,13 @@ class SocketStream extends EventDispatcher
 {
     
     /**
+     * a unique id the application can use to access persistent sockets.
+     * 
+     * @var mixed
+     * @access protected
+     */
+    protected $id;
+    /**
      * is_closed
      * 
      * (default value: false)
@@ -58,7 +65,7 @@ class SocketStream extends EventDispatcher
         catch(\ErrorException $e) {
             //@todo log exception
             $this->close();
-            return 0;
+            return false;
         }
           
     }
@@ -99,6 +106,26 @@ class SocketStream extends EventDispatcher
     public function isClosed()
     {
         return $this->is_closed;
+    }
+    
+    public function setId($id)
+    {
+        $this->id = $id;
+    }
+    
+    public function getId()
+    {
+        return $this->id;
+    }
+    
+    public function getById($id)
+    {
+        if(isset($this->messageHash[$id])){
+            return $this->messageHash[$id];
+        }
+        else{
+            return false;
+        }
     }
 
 }

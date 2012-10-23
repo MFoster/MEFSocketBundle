@@ -175,12 +175,22 @@ class SocketServer extends SocketBase
         $evt = new SocketEvent($socket_stream, SocketEvent::OPEN);
         $this->dispatch($evt);
         if($evt->isValid() && !$socket_stream->isClosed()){
+            $stream = $this->createStream($new_stream);
+            $id = $this->generateStreamId();
+            
             $this->streams[] = $new_stream;
-            $this->socketStreams[] = $this->createStream($new_stream);
+            $this->socketStreams[] = $stream;
+            $stream->setId($id);
+            $this->socketHash[$id] = $stream;
         }
         else{
             $this->close($new_stream);
         }
+    }
+    
+    protected function generateStreamId()
+    {
+        return md5(microtime());
     }
     
     /**
@@ -214,6 +224,9 @@ class SocketServer extends SocketBase
         socket_close($stream);
         foreach($this->streams as $index => $loop_stream){
             if($stream == $loop_stream){
+                $streamObj = $this->socketStreams[$index];
+                $id = $streamObj->getId();
+                unset($this->streamHash[$id]);
                 array_splice($this->streams, $index, 1);
                 array_splice($this->socketStreams, $index, 1);
                 break;
