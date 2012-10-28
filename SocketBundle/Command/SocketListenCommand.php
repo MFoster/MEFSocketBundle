@@ -34,6 +34,7 @@ class SocketListenCommand extends ContainerAwareCommand
         $this
             ->setName('socket:listen')
             ->setDescription('Starts the socket listening to a specified port')
+            ->addArgument('server', InputArgument::OPTIONAL, 'If set, will use specified service instead of default socket')
             ->addOption('port', null, InputOption::VALUE_NONE, 'If set, will override configured port')
             ->addOption('host', null, InputOption::VALUE_NONE, 'If set will override configured host name')
             ->addOption('debug', null, InputOption::VALUE_NONE, 'Adds log events to terminal')
@@ -51,9 +52,15 @@ class SocketListenCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $name = $input->getArgument('server');
+        
+        $evtPrefix = sprintf('socket.%s.', ($name ? $name : 'default'));
+        
         $container = $this->getContainer();
         //$container->enterScope('socket');
-        $socket = $container->get('mef.socket.server');
+        $serviceId = ($name ? sprintf('socket.%s.server', $name) : 'mef.socket.server');
+        $socket = $container->get($serviceId);
+        $name = $socket->getName();
         $evt = $container->get('event_dispatcher');
         
         $this->output = $output;
@@ -66,16 +73,16 @@ class SocketListenCommand extends ContainerAwareCommand
         }
         
         if($input->getOption('debug')){
-            $evt->addListener('socket.open', array($this, 'debugSocketOpen'));
-            $evt->addListener('socket.message', array($this, 'debugSocketMessage'));
-            $evt->addListener('socket.close', array($this, 'debugSocketClose'));
+            $evt->addListener($evtPrefix . 'open', array($this, 'debugSocketOpen'));
+            $evt->addListener($evtPrefix . 'message', array($this, 'debugSocketMessage'));
+            $evt->addListener($evtPrefix . 'close', array($this, 'debugSocketClose'));
         }
         
         if($input->getOption('test-mode')){
-            $evt->addListener('socket.message', array($this, 'testModeMessage'));
+            $evt->addListener($evtPrefix . 'message', array($this, 'testModeMessage'));
         }
         
-        $evt->addListener('socket.message', array($this, 'handleSocketMessage'));
+        $evt->addListener($evtPrefix . 'message', array($this, 'handleSocketMessage'));
         
         set_time_limit(0);
         

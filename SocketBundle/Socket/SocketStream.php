@@ -23,6 +23,16 @@ class SocketStream extends EventDispatcher
      * @access protected
      */
     protected $is_closed = false;
+    
+    /**
+     * chunkLength
+     * 
+     * (default value: 1024)
+     * 
+     * @var int
+     * @access protected
+     */
+    protected $chunkLength = 1024;
     /**
      * __construct function.
      * 
@@ -81,6 +91,16 @@ class SocketStream extends EventDispatcher
     {
         $message .= "\n";
         return $this->write($message);
+    }
+    
+    public function read()
+    {
+        if($this->isClosed()){
+            return false;
+        }
+        else{
+            return socket_read($this->stream, $this->chunkLength);
+        }
     }
     
     /**

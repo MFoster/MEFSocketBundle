@@ -219,19 +219,20 @@ class SocketServer extends SocketBase
      */
     protected function close($stream)
     {
-        $evt = new SocketEvent($stream, SocketEvent::CLOSE);
-        $this->dispatch($evt);
-        socket_close($stream);
         foreach($this->streams as $index => $loop_stream){
             if($stream == $loop_stream){
-                $streamObj = $this->socketStreams[$index];
-                $id = $streamObj->getId();
+                $socketStream = $this->socketStreams[$index];
+                $id = $socketStream->getId();
+                $socketStream->close();
+                $evt = new SocketEvent($socketStream, SocketEvent::CLOSE);
+                $this->dispatch($evt);
                 unset($this->streamHash[$id]);
                 array_splice($this->streams, $index, 1);
                 array_splice($this->socketStreams, $index, 1);
                 break;
             }
         }
+        socket_close($stream);
     }
     
     
@@ -285,7 +286,8 @@ class SocketServer extends SocketBase
     protected function readStream($stream)
     {
         try{
-            $message = socket_read($stream, $this->chunkLength);
+            $socketStream = $this->findStreamByStream($stream);
+            $message = $socketStream->read();
         }
         catch(\ErrorException $ex){
             $this->logger->debug('socket connection has been closed by peer, removing from collection');
@@ -295,9 +297,6 @@ class SocketServer extends SocketBase
         
         $input = $this->cleanMessage($message);
         if(strlen($input) > 0){
-            
-            $socketStream = $this->findStreamByStream($stream);
-            
             if($socketStream == false){
                 $this->logger->err('failed to find socket stream by stream');
                 return false;

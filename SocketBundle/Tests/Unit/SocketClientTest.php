@@ -27,7 +27,7 @@ class SocketServerThanksTest extends ApplicationTestCase
         
         $client = $this->get('mef.socket.client');
         
-        $client->write('hello');
+        $client->writeln('hello');
         
         $message = $client->read();
         
@@ -48,7 +48,7 @@ class SocketServerThanksTest extends ApplicationTestCase
         
         $client = $this->get('mef.socket.client');
         
-        $client->write('thanks');
+        $client->writeln('thanks');
         
         $message = $client->read();
         

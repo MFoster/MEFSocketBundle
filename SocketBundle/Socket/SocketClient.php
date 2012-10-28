@@ -155,6 +155,13 @@ class SocketClient extends SocketBase
         
     }
     
+    public function writeln($message)
+    {
+        $message .= "\n";
+        
+        $this->write($message);
+    }
+    
     /**
      * reads the first segment of information
      .
