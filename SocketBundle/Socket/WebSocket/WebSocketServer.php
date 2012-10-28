@@ -125,14 +125,17 @@ class WebSocketServer extends SocketServer
         }
         
         $arr = preg_split("/\r\n/", $str);//split all new lines
+        
+        //print_r($arr);
         array_shift($arr); //shift off the /HTTP/
         $headers = array();
         foreach($arr as $header){
             $headerPart = explode(':', $header);
             $headers[strtolower($headerPart[0])] = trim($headerPart[1]);
         }
+        //print_r($headers);
         //UPPGRAAAYYYDE
-        if(strtolower($headers['upgrade']) !== 'websocket' || strtolower($headers['connection']) !== 'upgrade'){
+        if(preg_match('/websocket/i', $headers['upgrade']) == 0 || preg_match('/upgrade/i', $headers['connection']) == 0){
             throw new MalformedWebSocketException('Bad header information given');
         }
         
