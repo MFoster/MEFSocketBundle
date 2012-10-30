@@ -49,6 +49,12 @@ class Message implements \Serializable
      */
     protected $_isClose = false;
     
+    protected $expectedLength = 0;
+    
+    protected $currentLength = 0;
+    
+    protected $buffer;
+    
     /**
      * __construct function.
      * 

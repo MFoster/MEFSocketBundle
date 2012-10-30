@@ -53,7 +53,8 @@ class WebSocketServer extends SocketServer
     protected function readStream($stream)
     {
         try{
-            $message = socket_read($stream, $this->chunkLength);
+            $socketStream = $this->findStreamByStream($stream);
+            $message = $socketStream->read();
         }
         catch(\ErrorException $ex){
             $this->logger->debug('socket connection has been closed by peer, removing from collection');
@@ -62,15 +63,9 @@ class WebSocketServer extends SocketServer
         }
         
         $input = $this->cleanMessage($message);
-        if(strlen($input) > 1){
-            
-            $socketStream = $this->findStreamByStream($stream);
-            
-            if($socketStream == false){
-                $this->logger->err('failed to find socket stream by stream');
-                return false;
-            }
-            else if($socketStream->hasHandshake()){
+        if(strlen($input) > 1){            
+  
+            if($socketStream->hasHandshake()){
                 $socketStream->addData($input);
                 
                 if($socketStream->hasMessage()){
@@ -110,18 +105,19 @@ class WebSocketServer extends SocketServer
             if($socketStream->isClosed()){
                 $this->close($stream);
             }
-            $this->logger->debug("Received information from a socket ". substr($input, 0, 35));
+            $this->logger->debug("Received information from a socket ");
         }
-        else if($input == '' || $input == "\0"){
+        else if("\0" == $input || "" == $input){
             $this->close($stream);
         }
+       
     }
     
     protected function createHandshakeRequest($str)
     {
         //@todo turn this index a regex that just does the beginning and end
         if(strpos($str, 'GET /') !== 0){
-            throw new MalformedWebSocketException('Unknown protocol HTTP protocol');
+            throw new MalformedWebSocketException('Unknown protocol HTTP protocol'. $str);
         }
         
         $arr = preg_split("/\r\n/", $str);//split all new lines

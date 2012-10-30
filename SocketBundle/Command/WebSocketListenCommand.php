@@ -8,6 +8,9 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use MEF\SocketBundle\Socket\WebSocket\JsonMessage;
+use MEF\SocketBundle\Socket\WebSocket\ByteBuffer;
+
 /**
  * WebSocketListenCommand class executes and starts a php socket.
  * 
@@ -121,7 +124,8 @@ class WebSocketListenCommand extends ContainerAwareCommand
      */
     public function debugSocketData($evt)
     {
-        $this->output->writeln('received websocket data '. substr($evt->getMessage(), 0, 100));
+        $this->output->writeln('received websocket data length = '. strlen($evt->getMessage()));
+        
     }
 
     /**
@@ -209,6 +213,36 @@ class WebSocketListenCommand extends ContainerAwareCommand
             else{
                 $this->output->writeln('successfully responded to big message message length = '. strlen($message));
             }
+        }
+        else if($obj = JsonMessage::decode($message)){
+            if($obj->message === 'hello'){
+                $message = JsonMessage::create(array('message' => 'Hello there Jason'));
+                
+                $result = $stream->sendMessage($message);
+                
+                if(false == $result){
+                    $this->output->writeln('failed to write to json stream, result returned false');
+                }
+                else{
+                    $this->output->writeln('successfully responded to json message hello '. $message);
+                }
+            }
+            if($obj->message === 'hello medium'){
+                $message = JsonMessage::create(array('message' => 'Responding to hello medium', 'junk' => $this->generateMessage(300)));
+                
+                $result = $stream->sendMessage($message);
+                
+                if(false == $result){
+                    $this->output->writeln('failed to write to json stream, result returned false');
+                }
+                else{
+                    $this->output->writeln('successfully responded to json message hello medium'. $message);
+                }
+
+                
+                
+            }
+            
         }
     }
     

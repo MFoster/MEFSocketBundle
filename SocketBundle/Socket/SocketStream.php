@@ -111,6 +111,7 @@ class SocketStream extends EventDispatcher
      */
     public function close()
     {
+     
         $this->is_closed = true;
        // socket_close($this->stream);
         

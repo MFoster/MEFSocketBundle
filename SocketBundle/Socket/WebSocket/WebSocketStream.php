@@ -33,6 +33,14 @@ class WebSocketStream extends SocketStream
      * @access protected
      */
     protected $messageStack = array();
+    
+    /**
+     * the incoming message, a message that isn't completely finished
+     * 
+     * @var mixed
+     * @access protected
+     */
+    protected $incoming;
     /**
      * mask
      * 
@@ -87,17 +95,7 @@ class WebSocketStream extends SocketStream
      * @access protected
      */
     protected $opCode = 0;
-    
-    
-    /**
-     * completeMessage
-     * 
-     * (default value: false)
-     * 
-     * @var bool
-     * @access protected
-     */
-    //protected $completeMessage = false;
+
     
     /**
      * partialMessage
@@ -156,7 +154,7 @@ class WebSocketStream extends SocketStream
         return $this->handshake;
     }
     
-    /**
+    /*v*
      * addData function.
      * 
      * @access public
@@ -170,20 +168,25 @@ class WebSocketStream extends SocketStream
         $lastByte = $buffer->last();
         //trailing connection close message attached to data, close up shop after this one.
         //but don't send it along to be decoded, becomes a very bad little byte
-        if($lastByte == 0 || $lastByte == "\0"){
-            $buffer->pop(); 
-            $this->close();
-        }
+        //if($lastByte == 0 || $lastByte == "\0"){
+         //   $buffer->pop(); 
+         //   $this->close();
+        //} 
         
-        if($this->buffer->length() > 0){
-            $this->processContinuedMessage($buffer);
-        }
-        else if($buffer->first() == ByteBuffer::TEXT_BYTE || $buffer->first() == ByteBuffer::PING_BYTE) {
+      
+        if(ByteBuffer::isOpenFrame($buffer->first())) {
             $this->processNewMessage($buffer);
         }
         else if($buffer->get(1) == 128){//zero length frame
             $this->close();
         }
+        else if($this->incoming && !($this->incoming->isComplete())){
+            $this->processContinuedMessage($buffer);
+        }
+        else{
+            $this->processNewMessage($buffer);
+        }
+
         
         
     }
@@ -228,70 +231,56 @@ class WebSocketStream extends SocketStream
      */
     protected function processNewMessage($buffer)
     {
+    
+            
         //@todo had the double and quad byte messages
-        $this->opCode = $buffer->first();
-        $this->messageLength = $buffer->get(1);
+        $opCode = $buffer->first();
+        $messageLength = $buffer->get(1);
         $offset = 2;
         $lengthBuff = $buffer->slice(0, 10);
         
-        //echo "\nLength buff = ". print_r($lengthBuff);
-        if($this->messageLength == $this->doubleByteLength) {
+        if($messageLength == $this->doubleByteLength) {
             $lenBuff = $buffer->slice(2, 2);
-            $this->messageLength = $lenBuff->sum();
+            $messageLength = $lenBuff->sum();
             $offset = 4;
         }
-        else if($this->messageLength == $this->quadByteLength){
+        else if($messageLength == $this->quadByteLength){
             $lenBuff = $buffer->slice(2, 8);
-            $this->messageLength = $lenBuff->sum();
+            $messageLength = $lenBuff->sum();
             $offset = 10;
         }
         else{
-            $this->messageLength = $this->messageLength - 128;
+            $messageLength = $messageLength - 128;
         }
-
-        
+  
         $mask = $buffer->slice($offset, 4); //array_slice($buffer, $offset, 4);
-        $payload = $buffer->slice($offset + 4); //array_slice($buffer, $offset + 4);
-        
+        $payload = $buffer->slice($offset + 4, $messageLength); //array_slice($buffer, $offset + 4);
+        $totalLength = $buffer->length() - ($offset + 4);
         $decoded = $payload->unmask($mask);
         
-        if($decoded->length() == $this->messageLength){
+        if($totalLength == $messageLength){
             $message = Message::create("$decoded");
-            $message->setTypeByCode($this->opCode);
+            $message->setTypeByCode($opCode);
             $this->addMessage($message);
         }
-        else{
+        else if($totalLength > $messageLength){
+            $difference = $totalLength - $messageLength;
+            $chunk = $decoded->slice(0, $messageLength);
+            $leftovers = $decoded->slice($messageLength);
+            $message = Message::create("$chunk");
+            $message->setTypeByCode($opCode);
+            $this->addMessage($message);
+            $this->processNewMessage($leftovers);
+        }
+        else{//the message isn't all here yet, create a new incoming message
             $this->mask = $mask;
-            $this->addBuffer($decoded);
+            $this->incoming = new IncomingMessage($decoded);
+            $this->incoming->setExpectedLength($messageLength);
+            $this->incoming->setTypeByCode($opCode);
         }
         
     }
-    
-    /**
-     * compileByteBuffer function.
-     * 
-     * @access protected
-     * @param mixed $buffer
-     * @return void
-     
-    protected function compileByteBuffer($buffer)
-    {
-        $multiplier = 0;
-        $total = 0;
-        $buffer = array_reverse($buffer); //flip it to LE.
-                
-        foreach($buffer as $index => $value){
-            
-            $multiplier = pow(256, $index);
-            
-            $total += (int)$multiplier * (int)$value;
-            
-        }
-                
-        return $total;
-        
-    }
-    */
+
     /**
      * addBuffer function.
      * 
@@ -316,10 +305,6 @@ class WebSocketStream extends SocketStream
     protected function addEncodedBuffer($buffer)
     {
         $this->buffer->addMasked($this->mask, $buffer);
-    
-    //    $decoded = $this->decodePayload($this->mask, $buffer);
-        
-    //    $this->addBuffer($decoded);
     }
     
     
@@ -331,36 +316,31 @@ class WebSocketStream extends SocketStream
      * @return void
      */
     protected function processContinuedMessage($buffer)
-    {
+    {  
+        $remaining = $this->incoming->getRemainingLength();
         
-        $this->addEncodedBuffer($buffer);
-        
-        $count = $this->buffer->length(); //count($this->buffer);
-        
-        if($count == $this->messageLength){
-            $message = Message::create("$this->buffer");
-            $message->setTypeByCode($this->opCode);
-            $this->addMessage($message);
-            $this->buffer = ByteBuffer::create(array());
-            $this->mask   = ByteBuffer::create(array());
+        //more data than this single message is designed.
+        if($remaining > 0 && $remaining < $buffer->length()){
+           $decoded = $buffer->slice(0, $remaining);
+            $decoded = $decoded->unmask($this->mask);
+            $this->incoming->add($decoded); 
+        }
+    
+        if($this->incoming->isComplete()){
+            $this->addMessage($this->incoming);
+            $this->incoming = false;
+            
+            $this->buffer = ByteBuffer::create();
+            $this->mask   = ByteBuffer::create();
+            $this->messageLength = 0;
             $this->opCode = 0;
         }
-        else if($count > $this->messageLength){
-            $temp = $this->buffer->slice(0, $this->messageLength); 
-            //array_slice($this->buffer, 0, $this->messageLength);
-            //$this->completeMessage = $this->parseBufferToString($this->buffer);
-            $tumor = $this->buffer->slice($this->messageLength);
-            $message = Message::create("$temp");
-            $message->setTypeByCode($this->opCode);
-            
-            $this->addMessage($message);
-            //array_slice($this->buffer, $this->messageLength);
-            $this->buffer = ByteBuffer::create(array());
-            $this->mask   = ByteBuffer::create(array());
-            $this->processNewMessage($tumor);
+        //ends with a new message on the end
+        if($buffer->length() > $remaining){
+            $leftover = $buffer->slice($remaining);
+            $this->processNewMessage($leftover);
         }
-        
-        
+
     }
     
     /**

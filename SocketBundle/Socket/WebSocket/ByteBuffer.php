@@ -49,7 +49,7 @@ class ByteBuffer implements \Iterator, \Serializable
     
     public function get($index)
     {
-        return $this->internal[$index];
+        return (isset($this->internal[$index]) ? $this->internal[$index] : NULL);
     }
     
     public function push($byte)
@@ -58,6 +58,20 @@ class ByteBuffer implements \Iterator, \Serializable
             $byte = self::parseByteToInt($byte);
         }        
         $this->internal[] = $byte;
+        
+    }
+    
+    public static function isOpenFrame($frame)
+    {
+        
+        $bit = ($frame > 128) ? $frame - 128 : $frame;
+        
+        if($bit == 1){
+            return true;
+        }        
+        else{
+            return false;
+        }
         
     }
     
@@ -424,7 +438,7 @@ class ByteBuffer implements \Iterator, \Serializable
      */
     public function first()
     {
-        return $this->internal[0];
+        return (isset($this->internal[0]) ? $this->internal[0] : NULL);
     }
     
     /**
