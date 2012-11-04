@@ -86,9 +86,9 @@ class WebSocketClientTest extends ApplicationTestCase
         
         $str = "$response";
         
-        $this->assertEquals(strlen($str), 3502);
+        $this->assertEquals(strlen($str), 3500);
         
-        $this->assertRegExp('/^A+F$/i', $str);
+        $this->assertRegExp('/^FA+F$/i', $str);
         
         
         
@@ -112,9 +112,9 @@ class WebSocketClientTest extends ApplicationTestCase
         
         $str = "$response";
         
-        $this->assertRegExp('/^A+F$/', $str);
+        $this->assertRegExp('/^FA+F$/i', $str);
         
-        $this->assertEquals(strlen($str), 80002);
+        $this->assertEquals(strlen($str), 80000);
     }
         
     /**
@@ -149,7 +149,7 @@ class WebSocketClientTest extends ApplicationTestCase
      * 
      * @access public
      * @return void
-     * @group websocket
+     * @group websocket.big
      */
     public function testLongMessage()
     {
@@ -162,6 +162,9 @@ class WebSocketClientTest extends ApplicationTestCase
         
         $this->assertEquals(80014, $result);
         
+        $response = $client->read();//more for the point of just hanging this test until it's finished on the other end
+        
+        $this->assertEquals("$response", 'message received');
         
     }
     

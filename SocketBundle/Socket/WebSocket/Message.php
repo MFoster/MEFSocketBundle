@@ -8,52 +8,37 @@ namespace MEF\SocketBundle\Socket\WebSocket;
  */
 class Message implements \Serializable
 {
+
+    const CONT_FRAME = 0;
     
-    /**
-     * _isText
-     * 
-     * (default value: false)
-     * 
-     * @var bool
-     * @access protected
-     */
-    protected $_isText  = false;
+    const TEXT_FRAME = 1;
     
-    /**
-     * _isPong
-     * 
-     * (default value: false)
-     * 
-     * @var bool
-     * @access protected
-     */
-    protected $_isPong  = false;
+    const BINARY_FRAME = 2;
     
-    /**
-     * _isPing
-     * 
-     * (default value: false)
-     * 
-     * @var bool
-     * @access protected
-     */
-    protected $_isPing  = false;
+    const CLOSE_FRAME = 8;
     
-    /**
-     * _isClose
-     * 
-     * (default value: false)
-     * 
-     * @var bool
-     * @access protected
-     */
-    protected $_isClose = false;
+    const PING_FRAME = 9;
+
+    const PONG_FRAME = 10;
     
-    protected $expectedLength = 0;
+    protected $length = 0;
     
-    protected $currentLength = 0;
-    
+    protected static $openFrames = array(self::CONT_FRAME, 
+                                         self::TEXT_FRAME, 
+                                         self::BINARY_FRAME, 
+                                         self::CLOSE_FRAME, 
+                                         self::PONG_FRAME, 
+                                         self::PING_FRAME);
+                                         
     protected $buffer;
+    
+    protected $tumor;
+    
+    protected $masked = false;
+    
+    protected $payload;
+    
+    protected $mask;
     
     /**
      * __construct function.
@@ -62,31 +47,194 @@ class Message implements \Serializable
      * @param mixed $msg
      * @return void
      */
-    public function __construct($msg)
+    public function __construct($msg = null)
     {
-        $this->setMessage($msg);
+        
+                                
+        if(is_string($msg)){
+            $this->setMessage($msg);
+        } elseif($msg instanceof Message) {
+            $this->setMessage("$msg");
+        } elseif ($msg instanceof ByteBuffer) {
+            $this->setBuffer($msg);
+        } else{
+            $this->buffer = ByteBuffer::create();
+            $this->mask = ByteBuffer::create();
+            $this->payload = ByteBuffer::create();
+        }
+        
+        
     }
     
-    public static function create($msg)
+    public static function create($msg = null)
     {
+        
         return new Message($msg);
+            
     }
     
-    /**
-     * setMessage function.
-     * 
-     * @access public
-     * @param mixed $msg
-     * @return void
-     */
-    public function setMessage($msg)
+    public function setMessage($message)
     {
-        $this->message = $msg;
+        $this->setOpcode(self::TEXT_FRAME);
+        $len = strlen($message);
+        $this->setLength($len);
+        $this->setPayload(ByteBuffer::create($message));
+         
     }
     
-    public function getMessage()
+    public function setPayload($payload)
     {
-        return $this->message;
+        $this->payload = $payload;
+    }
+    
+    public function getPayload()
+    {
+        return $this->payload;
+    }
+    
+    public function setBuffer($buff)
+    {
+        
+        $this->buffer = $buff;
+        $control = $buff->first();
+        $fin = $control >= 128;
+        $opcode = self::chopTopBit($control);
+        $len = $buff->get(1);
+        $mask = $len >= 128;
+        $length = self::chopTopBit($len);
+        $offset = 2;
+        if($length < 126 && $length > 0){
+            //validation
+        }
+        else if($length == 126){
+            $length = $buff->slice(2, 2)->sum();
+            $offset = 4;
+        }
+        else if($length == 127){
+            $length = $buff->slice(2, 8)->sum();
+            $offset = 10;
+            echo "calculate 8 byte length = $length";
+        }
+        else{
+            throw new \ErrorException('Buffer sent to ' . __CLASS__ . ' had incompatible length of '. $length);
+        }
+        
+                
+        $this->setMasked($mask);
+        if($mask){
+            $mask = $buff->slice($offset, 4);
+            $offset += 4;
+            $this->setMask($mask);
+        }
+                
+        $payload = $buff->slice($offset, $length);
+        $offset += $length;
+        
+        if($buff->length() > $offset){
+            $tumor = $buff->slice($offset);
+            $this->setTumor($tumor);
+        }
+
+        $this->setLength($length);
+        
+        if($mask){
+            $decoded = $payload->unmask($mask);
+            $this->setPayload($decoded);
+        }
+        else{
+            $this->setPayload($payload);
+        }
+        
+        $this->setOpcode($opcode);
+
+    }
+    
+    public function setTumor($tumor)
+    {
+        $this->tumor = $tumor;
+        
+        return $this;
+    }
+    
+    public function hasTumor()
+    {
+        return $this->tumor && $this->tumor->length() > 0;
+    }
+    
+    public function getTumor()
+    {
+        return $this->tumor;
+    }
+    
+    public function getBuffer()
+    {
+        return $this->buffer;
+    }
+    
+    public function setMasked($bool)
+    {
+        if(false === $bool){
+            $this->mask = false;
+        } else {
+            $this->mask = $this->generateMask();
+        }
+        
+        return $this;
+    }
+    
+    public function isMasked()
+    {
+        return $this->mask && $this->mask->length() > 0;
+    }
+    
+    public function setMask($mask)
+    {
+        $this->mask = $mask;
+        
+        return $this;
+    }
+    
+    public function getMask()
+    {
+        return $this->mask;
+    }
+    
+    public function add($buffer)
+    {
+        $len = $buffer->length();
+        
+        if($len + $this->payload->length() > $this->length){
+            $dif = $this->length - $this->payload->length();
+            $chunk = $buffer->slice(0, $dif);
+            $this->payload->add($chunk);
+            $tumor = $buffer->slice($dif);
+            $this->setTumor($tumor);
+        } else {
+            $this->payload->add($buffer);
+        }
+                
+    }
+    
+    
+    public function addEncoded($buffer)
+    {
+        if(!$this->isMasked()){
+            throw new \ErrorException('Message is not masked, cannot add encoded information');
+        }
+        
+        $len = $buffer->length();
+        
+        if($len + $this->payload->length() > $this->length){
+            $dif = $this->length - $this->payload->length();
+            $chunk = $buffer->slice(0, $dif);
+            $this->payload->add($chunk->unmask($this->mask));//the only deviation between this and add really
+            $tumor = $buffer->slice($dif);
+            $this->setTumor($tumor);//do not unmask the tumor, its a new message with a new mask
+        } else {
+            $this->payload->add($buffer->unmask($this->mask));
+        }
+        
+        
     }
     
     /**
@@ -96,8 +244,10 @@ class Message implements \Serializable
      * @return string
      */
     public function __toString()
-    {
-        return "$this->message";
+    {   
+        
+        return "$this->payload";
+        
     }
         
     /**
@@ -108,7 +258,7 @@ class Message implements \Serializable
      */
     public function isText()
     {
-        return $this->_isText;
+        return $this->opcode == self::TEXT_FRAME;
     }
     
     /**
@@ -119,7 +269,7 @@ class Message implements \Serializable
      */
     public function isPing()
     {
-        return $this->_isPing;
+        return $this->opcode === self::PING_FRAME;
     }
     
     /**
@@ -130,10 +280,9 @@ class Message implements \Serializable
      */
     public function isPong()
     {
-        return $this->_isPong;
+        return $this->opcode === self::PONG_FRAME;
     }
-    
-    
+
     /**
      * isClose function.
      * 
@@ -142,127 +291,75 @@ class Message implements \Serializable
      */
     public function isClose()
     {
-        return $this->_isClose;
+        return $this->opcode === self::CLOSE_FRAME;
     }
     
-    
-    /**
-     * setText function.
-     * 
-     * @access public
-     * @param boolean $bool
-     * @return void
-     */
-    public function setText($bool)
+    public static function isControlFrame($byte)
     {
-        $this->clear();
-        $this->_isText = true;
+        $byte = self::chopTopBit($byte);
+        return in_array($byte, self::$openFrames);
     }
     
-    /**
-     * setClose function.
-     * 
-     * @access public
-     * @param boolean $bool
-     * @return void
-     */
-    public function setClose($bool)
+
+    public static function chopTopBit($byte)
     {
-        $this->clear();
-        $this->_isClose = $bool;
+        return ($byte > 128) ? $byte - 128 : $byte;
     }
-    
-    /**
-     * setPing function.
-     * 
-     * @access public
-     * @param boolean $bool
-     * @return void
-     */
-    public function setPing($bool)
-    {
-        $this->clear();
-        $this->_isPing = $bool;
-    }
-    
-    /**
-     * setPong function.
-     * 
-     * @access public
-     * @param boolean $bool
-     * @return void
-     */
-    public function setPong($bool)
-    {
-        $this->clear();
-        $this->_isPong= true;
-    }
-    
-    /**
-     * setTypeByCode function.
-     * 
-     * @access public
-     * @param int $code
-     * @return void
-     */
-    public function setTypeByCode($code)
-    {
-    
-        switch($code){
-            case ByteBuffer::TEXT_BYTE:
-                $this->setText(true);
-                break;
-            case ByteBuffer::CLOSE_BYTE:
-                $this->setClose(true);
-                break;
-            case ByteBuffer::PING_BYTE:
-                $this->setPing(true);
-                break;
-            case ByteBuffer::PONG_BYTE:
-                $this->setPong(true);
-                break;
-        }
         
-    }
-    
-    /**
-     * setType function.
-     * 
-     * @access public
-     * @param string $type
-     * @return void
-     */
-    public function setType($type)
+
+    public function setOpcode($code)
     {
-        switch($type){
-            case 'text':
-                $this->setText(true);
-                break;
-            case 'close':
-                $this->setClose(true);
-                break;
-            case 'ping':
-                $this->setPing(true);
-                break;
-            case 'pong':
-                $this->setPong(true);
-                break;
+        $code = self::chopTopBit($code);
+        if(!(in_array($code, self::$openFrames))){
+            throw new \InvalidArgumentException(sprintf('Opcode sent to ' . __CLASS__ . ' is invalid, %d not found in list of valid op codes', $code));
         }
+        $this->opcode = $code;
+        return $this;
     }
     
-    public function clear()
+    public function getOpcode()
     {
-        $this->_isText = $this->_isClose = $this->_isPong = $this->_isPing = false;
+        return chr($this->opcode + 128);
+    }
+    
+    public function setLength($len)
+    {
+        $this->length = $len;        
+    }
+    
+    public function getLength()
+    {
+        return ByteBuffer::parseNumberToCountBuffer($this->length, $this->isMasked());
+    }
+    
+    public function isComplete()
+    {
+        if($this->payload && $this->payload->length() == $this->length && $this->payload->length() > 0){
+            return true;
+        } elseif ($this->payload && $this->payload->length() > $this->length) {
+            throw new \RuntimeException(sprintf('Message overflow, message payload has exceeded the calculated length by %d payload len = %d and message length = %d', 
+                                                $this->payload->length() - $this->length, $this->payload->length(), $this->length));
+        }
+        else{
+            return false;
+        }
     }
     
     public function serialize()
     {
-        return "$this";
+        return $this->getOpCode() . $this->getLength() . (($this->isMasked()) 
+                                                         ? $this->getMask() . $this->getPayload()->mask($this->getMask())
+                                                         : $this->getPayload());
     }
     
     public function unserialize($str)
     {
         $this->setMessage($str);
+    }
+    
+    protected function generateMask()
+    {
+        return ByteBuffer::create(array(rand(0, 255), rand(0, 255), rand(0, 255), rand(0, 255)));
     }
     
 }

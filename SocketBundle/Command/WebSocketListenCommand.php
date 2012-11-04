@@ -124,7 +124,7 @@ class WebSocketListenCommand extends ContainerAwareCommand
      */
     public function debugSocketData($evt)
     {
-        $this->output->writeln('received websocket data length = '. strlen($evt->getMessage()));
+        $this->output->writeln('received websocket data length = '.  substr($evt->getMessage(), 0, 100));
         
     }
 
@@ -238,11 +238,10 @@ class WebSocketListenCommand extends ContainerAwareCommand
                 else{
                     $this->output->writeln('successfully responded to json message hello medium'. $message);
                 }
-
-                
-                
             }
-            
+        }
+        else{
+            $stream->sendMessage('message received');
         }
     }
     
@@ -265,8 +264,8 @@ class WebSocketListenCommand extends ContainerAwareCommand
     protected function generateMessage($num)
     {
     
-        $str = 'A';
-        for($i = 0; $i < $num; $i++){
+        $str = 'F';
+        for($i = 2; $i < $num; $i++){
             $str .= 'A';
         }
         
@@ -280,7 +279,7 @@ class WebSocketListenCommand extends ContainerAwareCommand
         
         $stream->pong($evt->getMessage());
         
-        $this->output->writeln('receive ping message, sent pong');
+        $this->output->writeln('received ping message, sent pong');
         
     }
     

@@ -14,16 +14,9 @@ class JsonMessage extends Message
         return json_decode($str);
     }
     
-    public static function create($obj)
+    public static function create($obj = false)
     {
         return new JsonMessage($obj);
-    }
-        
-    public function __construct($obj)
-    {
-        
-        $this->setMessage($obj);
-        
     }
     
     public function setMessage($obj)

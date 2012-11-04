@@ -120,8 +120,11 @@ class ByteBuffer implements \Iterator, \Serializable
      */
     public static function parseNumberToCountBuffer($count, $mask=true)
     {
-        if($count < 125) {        
-              $count = ByteBuffer::create(array((int)$count));
+        if($count < 125) {
+            if($mask){
+                $count += 128;
+            }  
+            $count = ByteBuffer::create(array((int)$count));
         }
         else if($count > 125 && $count < self::DOUBLE_BYTE_LENGTH) {
             $count = ByteBuffer::parseNumberToBuffer($count);
@@ -206,6 +209,17 @@ class ByteBuffer implements \Iterator, \Serializable
             $arr = $arr->getInternal();
         }
         $this->internal = array_merge($this->internal, $arr);
+        
+        return $this;
+    }
+    
+    public function prepend($arr)
+    {
+        if($arr instanceof ByteBuffer){
+            $arr = $arr->getInternal();
+        }
+        
+        $this->internal = array_merge($arr, $this->internal);
         
         return $this;
     }

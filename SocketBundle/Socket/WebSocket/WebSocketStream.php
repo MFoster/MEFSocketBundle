@@ -168,13 +168,15 @@ class WebSocketStream extends SocketStream
         $lastByte = $buffer->last();
         //trailing connection close message attached to data, close up shop after this one.
         //but don't send it along to be decoded, becomes a very bad little byte
-        //if($lastByte == 0 || $lastByte == "\0"){
-         //   $buffer->pop(); 
-         //   $this->close();
-        //} 
+        
+        
+        if($lastByte == 0 || $lastByte == "\0"){
+            $buffer->pop(); 
+            $this->close();
+        } 
         
       
-        if(ByteBuffer::isOpenFrame($buffer->first())) {
+        if(Message::isControlFrame($buffer->first())) {
             $this->processNewMessage($buffer);
         }
         else if($buffer->get(1) == 128){//zero length frame
@@ -184,7 +186,8 @@ class WebSocketStream extends SocketStream
             $this->processContinuedMessage($buffer);
         }
         else{
-            $this->processNewMessage($buffer);
+            print_r($buffer);
+            throw new \RuntimeException('Failed to determine how to handle data');
         }
 
         
@@ -194,7 +197,7 @@ class WebSocketStream extends SocketStream
     public function pong($msg)
     {
         
-        return $this->sendMessage($msg, ByteBuffer::PONG_BYTE);
+        return $this->sendMessage($msg, Message::PONG_FRAME);
         
     }
     
@@ -232,80 +235,20 @@ class WebSocketStream extends SocketStream
     protected function processNewMessage($buffer)
     {
     
-            
-        //@todo had the double and quad byte messages
-        $opCode = $buffer->first();
-        $messageLength = $buffer->get(1);
-        $offset = 2;
-        $lengthBuff = $buffer->slice(0, 10);
+        $message = Message::create($buffer);
         
-        if($messageLength == $this->doubleByteLength) {
-            $lenBuff = $buffer->slice(2, 2);
-            $messageLength = $lenBuff->sum();
-            $offset = 4;
-        }
-        else if($messageLength == $this->quadByteLength){
-            $lenBuff = $buffer->slice(2, 8);
-            $messageLength = $lenBuff->sum();
-            $offset = 10;
-        }
-        else{
-            $messageLength = $messageLength - 128;
-        }
-  
-        $mask = $buffer->slice($offset, 4); //array_slice($buffer, $offset, 4);
-        $payload = $buffer->slice($offset + 4, $messageLength); //array_slice($buffer, $offset + 4);
-        $totalLength = $buffer->length() - ($offset + 4);
-        $decoded = $payload->unmask($mask);
-        
-        if($totalLength == $messageLength){
-            $message = Message::create("$decoded");
-            $message->setTypeByCode($opCode);
+        if($message->isComplete()){
             $this->addMessage($message);
-        }
-        else if($totalLength > $messageLength){
-            $difference = $totalLength - $messageLength;
-            $chunk = $decoded->slice(0, $messageLength);
-            $leftovers = $decoded->slice($messageLength);
-            $message = Message::create("$chunk");
-            $message->setTypeByCode($opCode);
-            $this->addMessage($message);
-            $this->processNewMessage($leftovers);
-        }
-        else{//the message isn't all here yet, create a new incoming message
-            $this->mask = $mask;
-            $this->incoming = new IncomingMessage($decoded);
-            $this->incoming->setExpectedLength($messageLength);
-            $this->incoming->setTypeByCode($opCode);
+            if($message->hasTumor()){
+                $this->processNewMessage($message->getTumor());
+            }
+        } else {
+            $this->incoming = $message;
         }
         
+        return true;        
     }
 
-    /**
-     * addBuffer function.
-     * 
-     * @access protected
-     * @param mixed $buffer
-     * @return void
-     */
-    protected function addBuffer($buffer)
-    {
-        $buff = $this->getBuffer();
-        
-        return $buff->add($buffer);
-    }
-    
-    /**
-     * addEncodedBuffer function.
-     * 
-     * @access protected
-     * @param mixed $buffer
-     * @return void
-     */
-    protected function addEncodedBuffer($buffer)
-    {
-        $this->buffer->addMasked($this->mask, $buffer);
-    }
     
     
     /**
@@ -317,29 +260,24 @@ class WebSocketStream extends SocketStream
      */
     protected function processContinuedMessage($buffer)
     {  
-        $remaining = $this->incoming->getRemainingLength();
-        
-        //more data than this single message is designed.
-        if($remaining > 0 && $remaining < $buffer->length()){
-           $decoded = $buffer->slice(0, $remaining);
-            $decoded = $decoded->unmask($this->mask);
-            $this->incoming->add($decoded); 
-        }
     
+        $this->incoming->addEncoded($buffer);
+        
+        if($this->incoming->hasTumor()){
+            echo "\n HAS TUMOR, PROCESSING THAT NOW \n";
+            $tumor = $this->incoming->getTumor();
+            print_r($tumor);
+            $this->processNewMessage($tumor);
+        }
+        
+
         if($this->incoming->isComplete()){
+            echo "\n DONE WITH INCOMGIN MESSAGE \n";
             $this->addMessage($this->incoming);
             $this->incoming = false;
-            
-            $this->buffer = ByteBuffer::create();
-            $this->mask   = ByteBuffer::create();
-            $this->messageLength = 0;
-            $this->opCode = 0;
         }
-        //ends with a new message on the end
-        if($buffer->length() > $remaining){
-            $leftover = $buffer->slice($remaining);
-            $this->processNewMessage($leftover);
-        }
+    
+        return true;
 
     }
     
@@ -495,20 +433,23 @@ class WebSocketStream extends SocketStream
             return $this->buffer = ByteBuffer::create(array());
         }
     }
-    public function sendMessage($message, $opCode=ByteBuffer::TEXT_BYTE)
+    public function sendMessage($message, $opCode=Message::TEXT_FRAME)
     {
-        $num = (int)strlen($message);
         
-        $lenBuff = ByteBuffer::parseNumberToCountBuffer($num, false);
         
-        $payload = chr($opCode)
-                 . $lenBuff
-                 . $message; //ByteBuffer::create($message);
-                 
-        //$buff = ByteBuffer::create($payload);
         
-        return $this->write($payload);                  
-        //return $this->write($payload);        
+        $message = Message::create($message);
+        
+        $message->setOpcode($opCode);
+        
+        echo "Sending message back to client \n";
+        
+        
+        
+        //print_r(ByteBuffer::create($message->serialize()));
+        
+        return $this->write($message->serialize());
+       
     }
 
 }

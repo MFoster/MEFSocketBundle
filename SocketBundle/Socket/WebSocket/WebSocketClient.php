@@ -92,36 +92,15 @@ class WebSocketClient extends SocketClient
      * @param mixed $message
      * @return void
      */
-    public function sendMessage($message, $opCode=ByteBuffer::TEXT_BYTE)
+    public function sendMessage($message, $opCode=Message::TEXT_FRAME)
     {
         if(!$this->handshake){
             $this->shakeHands();
         }
         
-        $mask = $this->generateMask();
-        $buffer = ByteBuffer::create($message);
-        $maskedBuffer = $buffer->mask($mask);
-        
-        $count = strlen($message);
-        
-        if($count < 126) {
-            $count = chr(128 + $count);//mask plus count
-        }
-        else if($count > 125 && $count < ByteBuffer::DOUBLE_BYTE_LENGTH) {
-            $count = ByteBuffer::parseNumberToBuffer($count);
-            $count->unshift(ByteBuffer::DOUBLE_BYTE);
-        }
-        else{
-            $count = ByteBuffer::parseNumberToBuffer($count);
-            $count->unshift(ByteBuffer::QUAD_BYTE);
-        }
-
-        $compiledMessage = chr($opCode)
-                   . $count
-                   . ByteBuffer::parseArrayToString($mask)
-                   . $maskedBuffer;
-                           
-        return $this->write($compiledMessage);
+        $wsMessage = Message::create($message)->setMasked(true)->setOpcode($opCode);
+         
+        return $this->write($wsMessage->serialize());
         
     }
     
@@ -135,7 +114,7 @@ class WebSocketClient extends SocketClient
     public function ping($msg = "ping")
     {
                 
-        return $this->sendMessage($msg, ByteBuffer::PING_BYTE);
+        return $this->sendMessage($msg, Message::PING_FRAME);
         
     }
     
@@ -298,64 +277,47 @@ class WebSocketClient extends SocketClient
     public function read()
     {
         $socket = $this->getSocket();
-        $buffer = ByteBuffer::create();
+        $reader = ByteReader::create($socket);
+        $message = Message::create();
         
-        $count = 0;
-        $length = -1;
-        $open = false;
-        $doubleByte = false;
-        $quadByte = false;
-        $offset = 0;
-        $firstByte = 0;
-        while(true){
+        $buff = $reader->read(1);
         
-            $byte = ByteBuffer::parseByteToInt(fgetc($socket));
-            $buffer->push($byte);
-            
-            
-            if(   ($byte == ByteBuffer::TEXT_BYTE 
-                || $byte == ByteBuffer::PONG_BYTE 
-                || $byte == ByteBuffer::CLOSE_BYTE) //end byte check
-                && $count == 0 
-                && $open == false) {
+        $message->setOpcode($buff->first());
         
-                $openByte = $byte;
-                $open = true;
-                $count++;
-                $length = 1; //keep it chugging
-                continue;
-            }
-            else if($open == true && $count == 1 && $byte <= 125){
-                $length = $byte + 1;
-                $offset = 2;
-            }
-            else if($open == true && $count == 1 && $byte == 126){
-                $length = $offset = 4;//allow length buffer to fill up
-                $doubleByte = true;
-            }
-            else if($open == true && $count == 1 && $byte == 127){
-                $length = $offset = 10;
-                $quadByte = true;
-            }
-            else if(($doubleByte || $quadByte) && $buffer->length() == $length){
-                $length = $buffer->slice(2, $offset - 2)->sum() + $offset - 1;
-            }            
-            
-            if ($count >= $length){
-                break;
-            }
-            
-            $count++;
-            
+        $length = $reader->read(1)->first();//client reading from server, should never be masked.
         
-        }
+        $buff->push($length);
 
-        $message = $buffer->slice($offset);
-        $msg = Message::create($message);
-        $msg->setTypeByCode($firstByte);
+        if($length < 126){
+            //validation, nothing to do.
+        } elseif ($length == 126) {
+            $length = $reader->read(2)->sum();
+        } elseif ($length == 127) {
+            $length = $reader->read(8)->sum();
+        } else {
+            
+            throw new \RuntimeException('Failed to determine length in websocket client read method');
+        }
+        
+        $message->setLength($length);
+        
+        $message->setPayload($reader->read($length));
+                
         return $message;
+              
+    }
+    
+    protected function _read($num)
+    {
+        $buffer = ByteBuffer::create();
+        $count = 0;
         
+        while($count < $num){
+            $byte = fgetc($socket);
+            $buffer->push($byte);
+        }
         
+        return $buffer;
     }
     
     /**
