@@ -137,9 +137,9 @@ class WebSocketStream extends SocketStream
     protected $quadByteLength = 255;
     
     
-    public function __construct($stream)
+    public function __construct($stream, $serializer)
     {
-        parent::__construct($stream);
+        parent::__construct($stream, $serializer);
         
         $this->buffer = ByteBuffer::create();
     }
@@ -433,20 +433,25 @@ class WebSocketStream extends SocketStream
             return $this->buffer = ByteBuffer::create(array());
         }
     }
+    
+    /**
+     * Uses a serialization function to turn the data into a string.
+     * The string is then passed to websocket message instance which packages
+     * the data string into a WS Payload and sends it through the socket.
+     * 
+     * @access public
+     * @param mixed $message string or object that represents the data that needs to be passed
+     * @param mixed $opCode (default: Message::TEXT_FRAME)
+     * @return void
+     */
     public function sendMessage($message, $opCode=Message::TEXT_FRAME)
     {
         
-        
+        $input = $this->serializer->serialize($message);
         
         $message = Message::create($message);
         
         $message->setOpcode($opCode);
-        
-        echo "Sending message back to client \n";
-        
-        
-        
-        //print_r(ByteBuffer::create($message->serialize()));
         
         return $this->write($message->serialize());
        

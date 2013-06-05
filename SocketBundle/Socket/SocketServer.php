@@ -42,6 +42,16 @@ class SocketServer extends SocketBase
      * @access protected
      */
     protected $socketStreams = array();
+    
+    /**
+     * Stores SocketStream objects by id.
+     * 
+     * (default value: array())
+     * 
+     * @var array
+     * @access protected
+     */
+    protected $socketHash = array();
     /**
      * eventDispatch
      * 
@@ -49,6 +59,24 @@ class SocketServer extends SocketBase
      * @access protected
      */
     protected $eventDispatcher;
+    
+    /**
+     * serializer
+     * 
+     * @var mixed
+     * @access protected
+     */
+    protected $serializer;
+    
+    /**
+     * serializeFormat
+     * 
+     * (default value: 'plain')
+     * 
+     * @var string
+     * @access protected
+     */
+    protected $serializeFormat = 'plain';
     
     /**
      * socket resource opened and listening to the specified port.
@@ -59,6 +87,7 @@ class SocketServer extends SocketBase
      * @access protected
      */
     protected $socket = false;
+    
     
     /**
      * application name, used for events to discerne between one server and another
@@ -77,15 +106,21 @@ class SocketServer extends SocketBase
      * @param mixed $port (default: false)
      * @return void
      */
-    public function __construct($logger, $eventDispatcher)
+    public function __construct($logger, $eventDispatcher, $serializer)
     {
         $this->logger = $logger;
         $this->eventDispatcher = $eventDispatcher;
+        $this->serializer = $serializer;
     }
     
     public function __destruct()
     {
         $this->shutdown();
+    }
+    
+    public function getUrl()
+    {
+        return $this->getHost() . ':' . $this->getPort();
     }
     
        
@@ -106,8 +141,6 @@ class SocketServer extends SocketBase
         
         socket_listen($this->socket);
         
-        //stream_socket_server('tcp://'. $this->getHost() . ':' . $this->getPort());
-        
         if(!$this->socket){
             return false;
         }
@@ -123,17 +156,20 @@ class SocketServer extends SocketBase
     }
     
     /**
-     * Sends a message to all steams connected to the server
+     * broadcast function.
      * 
      * @access public
      * @param mixed $input
      * @return void
      */
-    public function broadcast($input)
+    public function broadcast($message)
     {
+        $this->logger->debug('entering server broadcast ');
+        
         foreach($this->socketStreams as $stream) {
-            if($stream && method_exists($stream, 'write'))
-                $stream->write($input);
+            if($stream && method_exists($stream, 'sendMessage')){
+                $stream->sendMessage($message);
+            }
         }
     }
     
@@ -174,16 +210,21 @@ class SocketServer extends SocketBase
         $socket_stream = $this->createStream($new_stream);
         $evt = new SocketEvent($socket_stream, SocketEvent::OPEN);
         $this->dispatch($evt);
+        $this->logger->debug('dispatched socket open event');
+        
         if($evt->isValid() && !$socket_stream->isClosed()){
             //$stream = $this->createStream($new_stream);
-            $id = $this->generateStreamId();
             
+            $id = $this->generateStreamId();
+            $this->logger->debug(sprintf('socket is valid, adding stream with id of [%s] to the collection', $id));    
             $this->streams[] = $new_stream;
             $this->socketStreams[] = $socket_stream;
             $socket_stream->setId($id);
             $this->socketHash[$id] = $socket_stream;
+        
         }
         else{
+            $this->logger->notify('socket deemed invalid, closing down and rejecting connection');
             $this->close($new_stream);
         }
     }
@@ -200,11 +241,21 @@ class SocketServer extends SocketBase
      * @param mixed $stream
      * @return SocketStream
      */
-    protected function createStream($stream)
+    public function createStream($stream)
     {
-        return new SocketStream($stream);
+        return new SocketStream($stream, $this);
     }
     
+    
+    public function serialize($data)
+    {
+        return $this->serializer->serialize($data, $this->serializeFormat);
+    }
+    
+    protected function unserialize($str)
+    {
+        return $this->serializer->unserialize($str, $this->serializeFormat);
+    }
     /**
      * Dispatches close event for a socket stream and removes it from
      * the stream collection and closes the socket stream.  Use this method when
@@ -226,6 +277,7 @@ class SocketServer extends SocketBase
                 $socketStream->close();
                 $evt = new SocketEvent($socketStream, SocketEvent::CLOSE);
                 $this->dispatch($evt);
+                $this->logger->debug(sprintf('closing down stream with id of [%s]', $id));
                 unset($this->streamHash[$id]);
                 array_splice($this->streams, $index, 1);
                 array_splice($this->socketStreams, $index, 1);
@@ -301,9 +353,17 @@ class SocketServer extends SocketBase
                 $this->logger->err('failed to find socket stream by stream');
                 return false;
             }
+            
             $evt = new SocketEvent($socketStream, SocketEvent::MESSAGE);
+            
             $evt->setMessage($input);
+            
+            $data = $this->serializer->unserialize($input, $this->serializeFormat);
+            
+            $evt->setData($data);
+            
             $this->dispatch($evt);
+            
             if($socketStream->isClosed()){
                 $this->close($stream);
             }

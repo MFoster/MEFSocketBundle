@@ -214,6 +214,8 @@ class WebSocketListenCommand extends ContainerAwareCommand
                 $this->output->writeln('successfully responded to big message message length = '. strlen($message));
             }
         }
+        
+        /*
         else if($obj = JsonMessage::decode($message)){
             if($obj->message === 'hello'){
                 $message = JsonMessage::create(array('message' => 'Hello there Jason'));
@@ -240,6 +242,7 @@ class WebSocketListenCommand extends ContainerAwareCommand
                 }
             }
         }
+        */
         else{
             $stream->sendMessage('message received');
         }

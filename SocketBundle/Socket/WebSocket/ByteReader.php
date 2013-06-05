@@ -22,7 +22,7 @@ class ByteReader
     public function read($callable, $num = false)
     {
         if(is_callable($callable) && $num){
-            return $this-readIterable($callable, $num);
+            return $this->readIterable($callable, $num);
         } else{
             $num = $callable;
         }

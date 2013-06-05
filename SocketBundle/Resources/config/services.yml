@@ -4,11 +4,12 @@ parameters:
     mef.websocket.server.class: MEF\SocketBundle\Socket\WebSocket\WebSocketServer
     mef.websocket.client.class: MEF\SocketBundle\Socket\WebSocket\WebSocketClient
     mef.websocket.broadcast.class: MEF\SocketBundle\Listener\WebSocketBroadcastListener
+    mef.websocket.relay.class: MEF\SocketBundle\Listener\WebsocketRelayListener
     
 services:
     mef.socket.server:
         class: %mef.socket.server.class%
-        arguments: [@logger, @event_dispatcher]
+        arguments: [@logger, @event_dispatcher, @mef.serializer]
     
     mef.socket.client:
         class: %mef.socket.client.class%
@@ -26,6 +27,36 @@ services:
         
     mef.websocket.broadcast:
         class: %mef.websocket.broadcast.class%
-        arguments: [@logger, @mef.websocket.server]
         tags:
-            - { name: kernel.event_listener, event: websocket.message, method: onMessage }
+            - { name: kernel.event_listener, event: websocket.broadcast.message, method: onMessage }
+            
+    mef.websocket.relay:
+        class: %mef.websocket.relay.class%
+        #arguments: [@socket.relay.server] gets defined dynamically
+        tags:
+            - { name: kernel.event_listener, event: websocket.relay.handshake, method: handleHandshake }
+            - { name: kernel.event_listener, event: websocket.relay.message, method: handleMessage }
+            
+                
+    mef.serializer.normalizer:
+        class: Symfony\Component\Serializer\Normalizer\GetSetMethodNormalizer
+        public: false
+    mef.serializer.encoder.json:
+        class: Symfony\Component\Serializer\Encoder\JsonEncoder
+        public: false
+    mef.serializer.encoder.plain:
+        class: MEF\SocketBundle\Encoder\PlainEncoder
+        public: false
+    
+    #mef.serializer.encoder.php:
+    #    class: MEF\SocketBundle\Serializer\Encoder\PhpEncoder
+    #    public: false
+        
+    mef.serializer:
+        class: Symfony\Component\Serializer\Serializer
+        arguments:
+            - [@mef.serializer.normalizer]
+            - json: @mef.serializer.encoder.json
+              plain: @mef.serializer.encoder.plain
+            
+            #- {php: @mef.serializer.encoder.php

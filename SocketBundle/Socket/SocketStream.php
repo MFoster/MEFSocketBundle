@@ -24,6 +24,9 @@ class SocketStream extends EventDispatcher
      */
     protected $is_closed = false;
     
+    
+    public $serializer;
+    
     /**
      * chunkLength
      * 
@@ -40,9 +43,14 @@ class SocketStream extends EventDispatcher
      * @param mixed $stream
      * @return void
      */
-    public function __construct($stream)
+    public function __construct($stream, $serializer)
     {    
-        $this->stream = $stream;   
+        $this->stream = $stream;
+        
+        $this->serializer = $serializer;
+        
+        
+        
     }
     
     /**
@@ -79,7 +87,11 @@ class SocketStream extends EventDispatcher
         }
           
     }
-    
+    public function sendMessage($message)
+    {
+        $message = $this->serializer->serialize($message);
+        return $this->write($message);
+    }
     /**
      * writeln function.
      * 

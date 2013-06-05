@@ -113,7 +113,6 @@ class Message implements \Serializable
         else if($length == 127){
             $length = $buff->slice(2, 8)->sum();
             $offset = 10;
-            echo "calculate 8 byte length = $length";
         }
         else{
             throw new \ErrorException('Buffer sent to ' . __CLASS__ . ' had incompatible length of '. $length);

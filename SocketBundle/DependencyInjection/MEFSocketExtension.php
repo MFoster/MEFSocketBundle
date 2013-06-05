@@ -42,6 +42,12 @@ class MEFSocketExtension extends Extension
         
         $client = $container->getDefinition('mef.socket.client');
         
+        $this->container = $container;
+        
+        $this->logger = new Reference('logger');
+        $this->eventDispatcher = new Reference('event_dispatcher');
+        $this->serializer = new Reference('mef.serializer');
+       
         //if host and port are set directly, that will be used
         if(isset($config['host']) && isset($config['port'])){
             $this->setServerClientCombo($server, $client, $config);
@@ -67,16 +73,8 @@ class MEFSocketExtension extends Extension
             $loggerDef = new Reference('logger');
             $eventDispatcher = new Reference('event_dispatcher');
             foreach($config['servers'] as $name => $serverConfig){
-                $className = ($serverConfig['protocol'] == 'web' ? 
-                             $container->getParameter('mef.websocket.server.class') : 
-                             $container->getParameter('mef.socket.server.class'));
-                             
-                $serverDef = new Definition($className);
-                $serverDef->addMethodCall('setName', array($name));
-                $serverDef->addMethodCall('setHost', array($serverConfig['host']));
-                $serverDef->addMethodCall('setPort', array($serverConfig['port']));
-                $serverDef->setArguments(array($loggerDef, $eventDispatcher));
-                $container->setDefinition(sprintf('socket.%s.server', $name), $serverDef);
+                $serverConfig['name'] = $name;
+                $serverDef = $this->createServerDef($serverConfig);
             }
         }
         
@@ -94,7 +92,49 @@ class MEFSocketExtension extends Extension
             }
         }
         
+        if(!isset($config['relay'])){
+            $container->removeDefinition('mef.websocket.relay');
+        } else {
+            $relayDef = $container->getDefinition('mef.websocket.relay');
+            
+            $relayServerRef = $this->createServerDef($config['relay']);
+            
+            $relayDef->setArguments(array($this->logger, $relayServerRef));
+        }
         
+        if(!isset($config['broadcast'])){
+            $container->removeDefinition('mef.websocket.broadcast');
+        } else {
+            $broadcastRef = $container->getDefinition('mef.websocket.broadcast');
+            
+            $broadcastServerRef = $this->createServerDef($config['broadcast']);
+            
+            $broadcastRef->setArguments(array($this->logger, $broadcastServerRef));
+        
+        }
+        
+        
+    }
+    
+    
+    protected function createServerDef($serverConfig)
+    {
+        $className = ($serverConfig['protocol'] == 'web' ? 
+                             $this->container->getParameter('mef.websocket.server.class') : 
+                             $this->container->getParameter('mef.socket.server.class'));
+                             
+        $serverDef = new Definition($className);
+        $serverDef->addMethodCall('setName', array($serverConfig['name']));
+        $serverDef->addMethodCall('setHost', array($serverConfig['host']));
+        $serverDef->addMethodCall('setPort', array($serverConfig['port']));
+        $serverDef->setArguments(array($this->logger, $this->eventDispatcher, $this->serializer));
+        
+        $serverId = sprintf('socket.%s.server', $serverConfig['name']);
+        
+        $this->container->setDefinition($serverId, $serverDef);
+        
+        return new Reference($serverId);
+
     }
     
     protected function setServerClientCombo($server, $client, $config)

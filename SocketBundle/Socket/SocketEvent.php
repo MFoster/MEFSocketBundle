@@ -35,6 +35,15 @@ class SocketEvent extends Event
      */
     protected $message;
     
+    
+    /**
+     * the unserialized message in it's structured data representation
+     * 
+     * @var mixed
+     * @access protected
+     */
+    protected $data;
+    
     /**
      * is_valid
      * 
@@ -81,6 +90,29 @@ class SocketEvent extends Event
         $this->message = $message;
     }
     
+    
+    /**
+     * setData function.
+     * 
+     * @access public
+     * @param mixed $data
+     * @return void
+     */
+    public function setData($data)
+    {
+        $this->data = $data;
+    }
+    
+    /**
+     * getData function.
+     * 
+     * @access public
+     * @return void
+     */
+    public function getData()
+    {
+        return $this->data;
+    }
     /**
      * getMessage function.
      * 

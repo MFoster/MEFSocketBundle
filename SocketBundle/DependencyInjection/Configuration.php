@@ -57,6 +57,23 @@ class Configuration implements ConfigurationInterface
                             ->scalarNode('protocol')->isRequired()->end()
                         ->end()
                     ->end()
+                ->end()
+                ->arrayNode('relay')
+                    ->children()
+                        ->scalarNode('host')->isRequired()->end()
+                        ->scalarNode('port')->isRequired()->end()
+                        ->scalarNode('protocol')->defaultValue('web')->end()
+                        ->scalarNode('name')->defaultValue('relay')->end()
+                    ->end()
+                ->end()
+                ->arrayNode('broadcast')
+                    ->children()
+                        ->scalarNode('host')->isRequired()->end()
+                        ->scalarNode('port')->isRequired()->end()
+                        ->scalarNode('protocol')->defaultValue('web')->end()
+                        ->scalarNode('name')->defaultValue('broadcast')->end()
+                    ->end()
+                ->end()
             ->end();
 
         // Here you should define the parameters that are allowed to
