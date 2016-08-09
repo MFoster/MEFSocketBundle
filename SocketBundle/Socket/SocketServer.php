@@ -358,7 +358,8 @@ class SocketServer extends SocketBase
             
             $evt->setMessage($input);
             
-            $data = $this->serializer->unserialize($input, $this->serializeFormat);
+            // $data = $this->serializer->unserialize($input, $this->serializeFormat);
+            $data = $input;
             
             $evt->setData($data);
             
@@ -368,6 +369,9 @@ class SocketServer extends SocketBase
                 $this->close($stream);
             }
             $this->logger->debug("Received information from a socket ". substr($input, 0, 35));
+        }
+        else {
+            $this->close($stream);
         }
     }
     
