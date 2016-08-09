@@ -37,7 +37,17 @@ abstract class SocketBase
      * @access protected
      */
     protected $chunkLength = 1024;
-    
+
+    /**
+     * cleanMessages
+     *
+     * (default value: true)
+     *
+     * @var bool
+     * @access public
+     */
+    protected $cleanMessages = true;
+
      /**
      * setHost function.
      * 
@@ -61,7 +71,19 @@ abstract class SocketBase
     {
         $this->port = $port;   
     }
-    
+
+    /**
+    * setCleanMessages function.
+    *
+    * @access public
+    * @param bool $cleanMessages
+    * @return void
+    */
+    public function setCleanMessages($cleanMessages)
+    {
+       $this->cleanMessages = $cleanMessages;
+    }
+
     /**
      * getPort function.
      * 
@@ -83,7 +105,18 @@ abstract class SocketBase
     {
         return $this->host;
     }
-    
+
+    /**
+     * getCleanMessages function.
+     *
+     * @access public
+     * @return bool
+     */
+    public function getCleanMessages()
+    {
+        return $this->cleanMessages;
+    }
+
     /**
      * cleanMessage function.
      * 
@@ -93,7 +126,12 @@ abstract class SocketBase
      */
     protected function cleanMessage($message)
     {
-        return preg_replace('/^[\s\r\n]+|[\s\r\n]+$/', '', $message);
+        if ($this->cleanMessages) {
+            return preg_replace('/^[\s\r\n]+|[\s\r\n]+$/', '', $message);
+        }
+        else {
+            return $message;
+        }
     }
 
 }
