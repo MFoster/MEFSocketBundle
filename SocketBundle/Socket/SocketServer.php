@@ -358,7 +358,8 @@ class SocketServer extends SocketBase
             
             $evt->setMessage($input);
             
-            $data = $this->serializer->unserialize($input, $this->serializeFormat);
+            // $data = $this->serializer->unserialize($input, $this->serializeFormat);
+            $data = $input;
             
             $evt->setData($data);
             
