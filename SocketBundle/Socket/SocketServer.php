@@ -369,6 +369,9 @@ class SocketServer extends SocketBase
             }
             $this->logger->debug("Received information from a socket ". substr($input, 0, 35));
         }
+        else {
+            $this->close($stream);
+        }
     }
     
     /**
